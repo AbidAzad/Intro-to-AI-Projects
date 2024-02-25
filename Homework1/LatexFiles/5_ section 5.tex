@@ -1,0 +1,43 @@
+\graphicspath{{Images/}}
+
+\section{Part 4 - Heuristics in the Adaptive A* }
+
+\textit{The project argues that “the Manhattan distances are consistent in
+gridworlds in which the agent can move only in the four main compass directions.” Prove that this is indeed the case.}
+
+The assertion that Manhattan distances are consistent in gridworlds, where the agent's movement is restricted to the four main compass directions (north, south, east, and west), can be substantiated by understanding the fundamental nature of Manhattan distances. The consistency arises from the methodology of calculating Manhattan distances, which involves summing up the shortest possible vertical and horizontal distances between two points.
+
+In a gridworld scenario where diagonal movement is not permitted, the agent is constrained to traverse only in either the vertical or horizontal direction. Consequently, when computing the Manhattan distance between any two points within such a grid, the summation of the individual vertical and horizontal steps remains constant. This constancy is a result of the nature of the gridworld, where the agent's movements are confined to the four cardinal directions.
+
+To elaborate further, consider two points within the gridworld. The Manhattan distance is derived by adding the absolute differences of their respective x-coordinates and y-coordinates. Since the agent is restricted to move exclusively in the vertical or horizontal direction, each step contributes consistently to the overall Manhattan distance. Consequently, this heuristic ensures that the computed distance accurately represents the shortest path between the points, without the possibility of overestimation.
+
+In essence, the restriction to cardinal movements in gridworlds aligns seamlessly with the nature of Manhattan distances, guaranteeing their consistency as a reliable heuristic. This adherence to the four main compass directions ensures that the heuristic consistently reflects the actual cost of reaching the target, reinforcing its utility in pathfinding algorithms within such constrained environments.
+
+\textit{Furthermore, it is argued that “The h-values hnew (s) ... are not only admissible but also consistent.” Prove that Adaptive A*
+leaves initially consistent h-values consistent even if action costs can increase.}
+
+It is contended that the admissible and consistent nature of the $h$-values, denoted as $h_{\text{new}}(s)$, remains intact in Adaptive A*. This consistency is preserved even when action costs are subject to increase. We will demonstrate this assertion in the context of a grid world where the agent is restricted to movement in four directions.
+
+Assume that $H$-values are consistent, with $h(s)$ adhering to the Manhattan Heuristics, and $h_{\text{new}}(s)$ defined as $g(\text{goal}) - g(s)$. Additionally, the cost of transitioning from $n$ to $\bar{n}$ is denoted as $c(n, a, \bar{n})$, with a fixed cost of one.
+
+Considering the triangle inequality:
+\[ h(n) \leq h(\bar{n}) + c(n, a, \bar{n}) \quad (1) \]
+
+The validity of this inequality for $h(s)$ establishes its consistency.
+
+Now, let's prove that:
+\[ h_{\text{new}}(n) \leq h_{\text{new}}(\bar{n}) + c(n, a, \bar{n}) \]
+
+Firstly, substitute:
+\[ h_{\text{new}}(n) := g(\text{goal}) - g(n) \quad (2) \]
+\[ h_{\text{new}}(\bar{n}) = g(\text{goal}) - g(\bar{n}) \quad (3) \]
+
+Substituting these into the triangle inequality, we obtain:
+\[ g(n) \geq g(\bar{n}) + c(n, a, \bar{n}) \quad (4) \]
+
+For a grid world with movement restricted to the four main compass directions, Equation (4) always holds true, considering $c(n, a, \bar{n})$ is one. If $g(\bar{n})$ is smaller than $g(n)$, subtracting one will make it even smaller. If $g(\bar{n})$ is greater than $g(n)$, subtracting one will equalize them. Therefore, the triangle inequality is satisfied, ensuring the consistency of $h_{\text{new}}(s)$ values.
+
+In the case of an increase in action costs, the triangle inequality is reconsidered as follows:
+\[ h_{\text{new}}(n) \leq h_{\text{new}}(\bar{n}) + c(n, a, \bar{n}) \leq h_{\text{new}}(\bar{n}) + \bar{c}(n, a, \bar{n}) \]
+
+Thus, the heuristic remains consistent.

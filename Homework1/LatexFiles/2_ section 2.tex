@@ -1,0 +1,18 @@
+\graphicspath{{Images/}}
+
+\section{Part 1 - Understanding the Methods}
+
+\textit{Explain in your report why the first move of the agent for the example search problem from Figure 8 is to the east rather
+than the north given that the agent does not know initially which cells are blocked.}
+
+In the given algorithm, the initial move of the agent is directed eastward instead of north. This choice is informed by the A* algorithm's inclination to prioritize the shortest unobstructed path. Notably, the agent possesses prior knowledge of the unblocked nature of cell E2, a characteristic established in the initial state, thereby driving its decision-making process with a heightened awareness of the environment.
+
+\textit{This project argues that the agent is guaranteed to reach the target if it is not separated from it by blocked cells. Give a
+convincing argument that the agent in finite gridworlds indeed either reaches the target or discovers that this is impossible
+in finite time. Prove that the number of moves of the agent until it reaches the target or discovers that this is impossible is
+bounded from above by the number of unblocked cells squared.}
+
+In a finite grid world, the agent, at worst, would traverse all unblocked nodes unless surrounded by inaccessible blocked nodes. The algorithm's termination criterion hinges on the agent visiting all nodes, ensuring the target is added to the open list. Should the target remain unvisited, rendering the open list empty, the algorithm halts without locating the target. However, the agent need not exhaustively explore all nodes to deduce the unattainability of the goal. Consider the scenario where the target is enclosed by blocked cells; the agent, nearing the goal, opts to forego circumnavigating the blocked area and instead explores paths distanced from the goal state.
+
+The algorithm concludes when the condition \[ g(\text{goal}) = f(\text{goal}) \geq f(s) \] is met, irrespective of visiting every cell. At this point, the agent determines the impracticality of reaching the goal within a finite timeframe. The agent's moves until reaching the target or determining its unattainability are upper-bounded by the square of the number of unblocked cells. In the worst case, with 'n' unblocked nodes arranged in a certain disposition, the algorithm expansively processes 'n' nodes at each iteration. Consequently, in the worst-case scenario, the total moves are capped at n squared.
+
