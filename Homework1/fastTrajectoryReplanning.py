@@ -480,7 +480,8 @@ def load_grid_from_file(file_path):
 
         return grid
 
-
+#############################PART 0: LOADING AND VISUALIZATION OF MAZE ENVIRONMENT################################
+ 
 # Function to draw the grid on the screen
 def draw_grid(screen, grid):
     for row in range(len(grid)):
@@ -608,7 +609,8 @@ class InputWindow:
         except ValueError as e:
             error_message = f"Invalid input: {e}\nPlease enter a valid number between 0 and 49."
             messagebox.showerror("Error", error_message)
-
+##################################################################################################################
+            
 def main(maze_num):
     pygame.init()
     script_dir = os.path.dirname(os.path.abspath(__file__))
