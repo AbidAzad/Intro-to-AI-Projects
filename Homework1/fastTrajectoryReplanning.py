@@ -114,7 +114,7 @@ class AStar:
         # Set to store closed (visited) cells.
         self.cl = set()
 
-        # Distance variable (Note: 'distance' is not initialized in the provided code)
+        # Distance variable 
         self.distance = None
 
         # Counter to keep track of expanded cells during the search.
