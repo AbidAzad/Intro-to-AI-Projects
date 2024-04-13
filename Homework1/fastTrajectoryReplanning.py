@@ -2,6 +2,7 @@ import pygame
 import timeit
 from tkinter import Tk, Label, Button, Entry, StringVar, messagebox
 import os
+import time
 # Constants for colors
 blockedColor = (75, 0, 130)  
 openColor = (144, 238, 144)  
@@ -11,8 +12,8 @@ bestPathColor = (255, 0, 255)
 pathColor = (255, 140, 0)    
 
 # Constants for grid dimensions
-CELL_WIDTH = 7
-CELL_HEIGHT = 7
+CELL_WIDTH = 5
+CELL_HEIGHT = 5
 CELL_MARGIN = 2
 
 # Global variables for starting and ending spots
@@ -459,6 +460,11 @@ class AStar:
         pygame.display.update()
         if color == pathColor:
             self.expanded_cell_count += 1
+        #pygame.display.flip()
+        #pygame.time.delay(100)
+        #pygame.event.pump()
+
+        
     #Get the count of expanded cells during pathfinding.
     def get_orange_cells_count(self):
         return self.expanded_cell_count
