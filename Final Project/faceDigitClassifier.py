@@ -1,10 +1,6 @@
 import numpy as np
-import scipy.optimize as opt
 import time
 import random
-import warnings
-from scipy.optimize import OptimizeWarning
-warnings.filterwarnings("ignore", category=OptimizeWarning)
 import os
 import pickle
 import matplotlib.pyplot as plt
@@ -202,13 +198,13 @@ class PerceptronClassifier:
 
 # Two-layer neural network classifier class
 class TwoLayerNeuralNetworkClassifier:
-    def __init__(self, output_classes, input_size, hidden_size, output_size, data_size, regularization_param, dataType, dataUsage, useSavedLearnWeightData):
+    def __init__(self, outClasses, inSize, hidSize, outSize, dataSize, regularization_param, dataType, dataUsage, useSavedLearnWeightData):
         # Initialize classifier parameters
-        self.input_size = input_size  # Number of input features
-        self.hidden_size = hidden_size  # Number of neurons in the hidden layer
-        self.output_size = output_size  # Number of output classes
-        self.data_size = data_size  # Size of the dataset
-        self.output_classes = output_classes  # List of output classes
+        self.inSize = inSize  # Number of input features
+        self.hidSize = hidSize  # Number of neurons in the hidden layer
+        self.outSize = outSize  # Number of output classes
+        self.dataSize = dataSize  # Size of the dataset
+        self.outClasses = outClasses  # List of output classes
         self.regularization_param = regularization_param  # Regularization parameter
         self.data_type = dataType
         self.data_usage = dataUsage
@@ -216,25 +212,16 @@ class TwoLayerNeuralNetworkClassifier:
         self.usedLearnedWeights = False
         self.useSavedLearnWeightData = useSavedLearnWeightData
 
-        # Initialize activation matrices
-        self.input_activation = np.ones((self.input_size + 1, data_size))  # Input layer activation matrix
-        self.hidden_activation = np.ones((self.hidden_size + 1, data_size))  # Hidden layer activation matrix
-        self.output_activation = np.ones((self.output_size, data_size))  # Output layer activation matrix
-
-        # Initialize bias
-        self.bias = np.ones((1, data_size))  # Bias for each data point
-
-        # Initialize weight change matrices
-        self.input_change = np.zeros((self.hidden_size, self.input_size + 1))  # Change in input layer weights
-        self.output_change = np.zeros((self.output_size, self.hidden_size + 1))  # Change in output layer weights
-
-        # Initialize weight epsilon values for random weight initialization
-        self.hidden_epsilon = np.sqrt(6.0 / (self.input_size + self.hidden_size))  # Epsilon for hidden layer weights
-        self.output_epsilon = np.sqrt(6.0 / (self.input_size + self.output_size))  # Epsilon for output layer weights
-
-        # Initialize weights randomly within epsilon range
-        self.input_weights = np.random.rand(self.hidden_size, self.input_size + 1) * 2 * self.hidden_epsilon - self.hidden_epsilon  # Hidden layer weights
-        self.output_weights = np.random.rand(self.output_size, self.hidden_size + 1) * 2 * self.output_epsilon - self.output_epsilon  # Output layer weights
+        self.inActivation = np.ones((self.inSize + 1, dataSize))  # Input layer activation matrix
+        self.hidActivation = np.ones((self.hidSize + 1, dataSize))  # Hidden layer activation matrix
+        self.outActivation = np.ones((self.outSize, dataSize))  # Output layer activation matrix
+        self.bias = np.ones((1, dataSize))  # Bias for each data point
+        self.inChange = np.zeros((self.hidSize, self.inSize + 1))  # Change in input layer weights
+        self.outChange = np.zeros((self.outSize, self.hidSize + 1))  # Change in output layer weights
+        self.hidWeightVariance = np.sqrt(6.0 / (self.inSize + self.hidSize))  # Epsilon for hidden layer weights
+        self.outWeightVariance = np.sqrt(6.0 / (self.inSize + self.outSize))  # Epsilon for output layer weights
+        self.inWeights = np.random.rand(self.hidSize, self.inSize + 1) * 2 * self.hidWeightVariance - self.hidWeightVariance  # Hidden layer weights
+        self.outWeights = np.random.rand(self.outSize, self.hidSize + 1) * 2 * self.outWeightVariance - self.outWeightVariance  # Output layer weights
 
     def set_regularization_param(self, regularization_param):
         # Set regularization parameter
@@ -248,46 +235,55 @@ class TwoLayerNeuralNetworkClassifier:
         # Derivative of sigmoid function
         return y * (1.0 - y)
 
-    def feed_forward(self, weight_vector):
-        # Feed-forward propagation through the network
-        self.input_weights = weight_vector[0:self.hidden_size * (self.input_size + 1)].reshape((self.hidden_size, self.input_size + 1))  # Extract input layer weights
-        self.output_weights = weight_vector[-self.output_size * (self.hidden_size + 1):].reshape((self.output_size, self.hidden_size + 1))  # Extract output layer weights
+    def forward_propagate(self, weight_vector):
+        # Extract input and output layer weights from the weight vector
+        self.inWeights = weight_vector[0:self.hidSize * (self.inSize + 1)].reshape((self.hidSize, self.inSize + 1))
+        self.outWeights = weight_vector[-self.outSize * (self.hidSize + 1):].reshape((self.outSize, self.hidSize + 1))
+        hidLayerInput = np.dot(self.inWeights, self.inActivation)  # Weighted sum of inputs to hidden layer
+        self.hidActivation[:-1, :] = self.sigmoid(hidLayerInput)  # Activation of hidden layer neurons
 
-        # Compute activations of hidden layer
-        hidden_z = self.input_weights.dot(self.input_activation)  # Weighted sum of inputs to hidden layer
-        self.hidden_activation[:-1, :] = self.sigmoid(hidden_z)  # Activation of hidden layer neurons
+        outLayerInput = np.dot(self.outWeights, self.hidActivation)  # Weighted sum of inputs to output layer
+        self.outActivation = self.sigmoid(outLayerInput)  # Activation of output layer neurons
+        cost_matrix = self.expected_output * np.log(self.outActivation) + (1 - self.expected_output) * np.log(1 - self.outActivation)  # Cost matrix
+        regulations = (np.sum(self.outWeights[:, :-1] ** 2) + np.sum(self.inWeights[:, :-1] ** 2)) * self.regularization_param / 2  # Regularization term
+        overall_cost = (-cost_matrix.sum() + regulations) / self.dataSize  # Overall cost
 
-        # Compute activations of output layer
-        output_z = self.output_weights.dot(self.hidden_activation)  # Weighted sum of inputs to output layer
-        self.output_activation = self.sigmoid(output_z)  # Activation of output layer neurons
-
-        # Calculate cost and regularization
-        cost_matrix = self.output_truth * np.log(self.output_activation) + (1 - self.output_truth) * np.log(1 - self.output_activation)  # Cost matrix
-        regulations = (np.sum(self.output_weights[:, :-1] ** 2) + np.sum(self.input_weights[:, :-1] ** 2)) * self.regularization_param / 2  # Regularization term
-        return (-cost_matrix.sum() + regulations) / self.data_size  # Overall cost
+        return overall_cost
 
     def back_propagate(self, weight_vector):
         # Back-propagation to compute gradients
-        self.input_weights = weight_vector[0:self.hidden_size * (self.input_size + 1)].reshape((self.hidden_size, self.input_size + 1))  # Extract input layer weights
-        self.output_weights = weight_vector[-self.output_size * (self.hidden_size + 1):].reshape((self.output_size, self.hidden_size + 1))  # Extract output layer weights
+        self.inWeights = weight_vector[0:self.hidSize * (self.inSize + 1)].reshape((self.hidSize, self.inSize + 1))  # Extract input layer weights
+        self.outWeights = weight_vector[-self.outSize * (self.hidSize + 1):].reshape((self.outSize, self.hidSize + 1))  # Extract output layer weights
 
-        # Compute error at output layer
-        output_error = self.output_activation - self.output_truth  # Output error
-
-        # Compute error at hidden layer
-        hidden_error = self.output_weights[:, :-1].T.dot(output_error) * self.dsigmoid(self.hidden_activation[:-1:])  # Hidden layer error
+        # Compute error
+        outError = self.outActivation - self.expected_output  # Output error
+        hidError = self.outWeights[:, :-1].T.dot(outError) * self.dsigmoid(self.hidActivation[:-1:])  # Hidden layer error
 
         # Compute weight changes
-        self.output_change = output_error.dot(self.hidden_activation.T) / self.data_size  # Change in output layer weights
-        self.input_change = hidden_error.dot(self.input_activation.T) / self.data_size  # Change in input layer weights
-
-        # Apply regularization to weight changes
-        self.output_change[:, :-1].__add__(self.regularization_param * self.output_weights[:, :-1])  # Regularization for output layer weights
-        self.input_change[:, :-1].__add__(self.regularization_param * self.input_weights[:, :-1])  # Regularization for input layer weights
+        self.outChange = outError.dot(self.hidActivation.T) / self.dataSize  # Change in output layer weights
+        self.inChange = hidError.dot(self.inActivation.T) / self.dataSize  # Change in input layer weights
+        self.outChange[:, :-1].__add__(self.regularization_param * self.outWeights[:, :-1])  # Regularization for output layer weights
+        self.inChange[:, :-1].__add__(self.regularization_param * self.inWeights[:, :-1])  # Regularization for input layer weights
 
         # Concatenate and return weight changes
-        return np.append(self.input_change.ravel(), self.output_change.ravel())
-
+        return np.append(self.inChange.ravel(), self.outChange.ravel())
+    
+    #Perform gradient descent to minimize the cost function and optimize the neural network weights.
+    def gradient_descent(self, initial_weight_vector, learning_rate, max_iterations):
+        # Make a copy of the initial weight vector to avoid modifying the original
+        weight_vector = initial_weight_vector.copy()
+        # Iterate through a fixed number of iterations
+        for i in range(max_iterations):
+            # Forward propagate to compute the cost and activations
+            self.forward_propagate(weight_vector)   
+            # Back propagate to compute the gradients
+            gradient = self.back_propagate(weight_vector)        
+            # Update the weight vector using the gradients and learning rate
+            weight_vector -= learning_rate * gradient
+        
+        # Return the optimized weight vector
+        return weight_vector
+    
     def train(self, train_data, train_labels, valid_data, valid_labels):
         if(self.useSavedLearnWeightData):
             # Create the learnedWeights folder if it doesn't exist
@@ -300,9 +296,9 @@ class TwoLayerNeuralNetworkClassifier:
                 # Load weights from file
                 self.usedLearnedWeights = True
                 with open(inputWeights_file_path, 'rb') as file:
-                    self.input_weights = pickle.load(file)
+                    self.inWeights = pickle.load(file)
                 with open(outputWeights_file_path, 'rb') as file:
-                    self.output_weights = pickle.load(file)
+                    self.outWeights = pickle.load(file)
                 return
             else:
                 print("Could not find Existing Saved Learned Weights. Will Create One Now...", end = "")
@@ -315,65 +311,66 @@ class TwoLayerNeuralNetworkClassifier:
 
         # Extract features from training data
         self.size_train = len(train_data)
-        features_train = [list(datum.values()) for datum in train_data]
+        features_train = [list(data.values()) for data in train_data]
         train_set = np.array(features_train, dtype=np.int32)
 
         # Set input activations and output truth values
-        self.input_activation[:-1, :] = train_set.transpose()
-        self.output_truth = self.labelMatrix(train_labels)
+        self.inActivation[:-1, :] = train_set.transpose()
+        self.expected_output = self.labelMatrix(train_labels)
 
         # Combine weights into a single vector
-        weight_vector = np.append(self.input_weights.ravel(), self.output_weights.ravel())
+        initial_weight_vector = np.append(self.inWeights.ravel(), self.outWeights.ravel())
 
-        # Use conjugate gradient optimization to minimize cost function
-        iteration = 100
-        weight_vector = opt.fmin_cg(self.feed_forward, weight_vector, fprime=self.back_propagate, maxiter=iteration, disp=False)
+        # Use gradient descent to minimize cost function
+        learning_rate = 0.01
+        max_iterations = 1000
+        if (self.data_type == "Digit"):
+            learning_rate = 0.1
+        weight_vector = self.gradient_descent(initial_weight_vector, learning_rate, max_iterations)
 
         # Separate weights back into input and output weights
-        self.input_weights = weight_vector[0:self.hidden_size * (self.input_size + 1)].reshape((self.hidden_size, self.input_size + 1))
-        self.output_weights = weight_vector[-self.output_size * (self.hidden_size + 1):].reshape((self.output_size, self.hidden_size + 1))
+        self.inWeights = weight_vector[0:self.hidSize * (self.inSize + 1)].reshape((self.hidSize, self.inSize + 1))
+        self.outWeights = weight_vector[-self.outSize * (self.hidSize + 1):].reshape((self.outSize, self.hidSize + 1))
         
         if(self.useSavedLearnWeightData):
             # Save weights to file
             with open(inputWeights_file_path, 'wb') as file:
-                pickle.dump(self.input_weights, file)
+                pickle.dump(self.inWeights, file)
             with open(outputWeights_file_path, 'wb') as file:
-                pickle.dump(self.output_weights, file)
+                pickle.dump(self.outWeights, file)
 
     def classify(self, test_data):
         # Classify test data using trained neural network
         self.size_test = len(test_data)
-        features_test = [list(datum.values()) for datum in test_data]
+        features_test = [list(data.values()) for data in test_data]
         test_set = np.array(features_test, dtype=np.int32)
         feature_test_set = test_set.transpose()
 
         # If the number of features in test data is different, reset activation matrices
-        if feature_test_set.shape[1] != self.input_activation.shape[1]:
-            self.input_activation = np.ones((self.input_size + 1, feature_test_set.shape[1]))
-            self.hidden_activation = np.ones((self.hidden_size + 1, feature_test_set.shape[1]))
-            self.output_activation = np.ones((self.output_size + 1, feature_test_set.shape[1]))
+        if feature_test_set.shape[1] != self.inActivation.shape[1]:
+            self.inActivation = np.ones((self.inSize + 1, feature_test_set.shape[1]))
+            self.hidActivation = np.ones((self.hidSize + 1, feature_test_set.shape[1]))
+            self.outActivation = np.ones((self.outSize + 1, feature_test_set.shape[1]))
 
         # Set input activations for test data
-        self.input_activation[:-1, :] = feature_test_set
+        self.inActivation[:-1, :] = feature_test_set
 
-        # Compute activations for hidden layer
-        hidden_z = np.dot(self.input_weights, self.input_activation)
-        self.hidden_activation[:-1, :] = self.sigmoid(hidden_z)
-
-        # Compute activations for output layer
-        output_z = np.dot(self.output_weights, self.hidden_activation)
-        self.output_activation = self.sigmoid(output_z)
+        # Compute activations
+        hidLayerInput = np.dot(self.inWeights, self.inActivation)
+        self.hidActivation[:-1, :] = self.sigmoid(hidLayerInput)
+        outLayerInput  = np.dot(self.outWeights, self.hidActivation)
+        self.outActivation = self.sigmoid(outLayerInput)
 
         # If output has multiple classes, return class with highest activation, else return binary classification
-        if self.output_size > 1:
-            return np.argmax(self.output_activation, axis=0).tolist()
+        if self.outSize > 1:
+            return np.argmax(self.outActivation, axis=0).tolist()
         else:
-            return (self.output_activation > 0.5).ravel()
+            return (self.outActivation > 0.5).ravel()
 
     def labelMatrix(self, labels):
         # Convert labels into a matrix with 1 at true class position and 0 elsewhere
-        result = np.zeros((len(self.output_classes), self.data_size))
-        for i in range(self.data_size):
+        result = np.zeros((len(self.outClasses), self.dataSize))
+        for i in range(self.dataSize):
             result[int(labels[i]), i] = 1
         return result
 
